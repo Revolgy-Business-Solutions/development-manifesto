@@ -66,6 +66,8 @@ Notes regarding deployment of the contained body of work. These should note any 
 ```
 ### Trunk-based development flow
 
+![Diagram](./img/trunk_based_development.png?raw=true)
+
 The diagram above shows a complete life cycle of a project managed with trunk based branching flow. Let's take a look at each step in detail. For instance, we are working with project [https://gitlab.com/Revolgy/branching-playground](https://gitlab.com/Revolgy/branching-playground)
 
 1. Implement change (no matter if it is a feature or fix)
