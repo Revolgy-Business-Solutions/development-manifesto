@@ -2,6 +2,14 @@
   - [Overview](#overview)
   - [Trunk-based development flow](#trunk-based-development-flow)
 - [👀 Code review](#-code-review)
+  - [Goal](#goal)
+  - [Reviewee’s side](#reviewees-side)
+    - [What to review](#what-to-review)
+    - [When to submit for a review](#when-to-submit-for-a-review)
+    - [Preparing code for a review](#preparing-code-for-a-review)
+    - [Finding reviewers](#finding-reviewers)
+  - [Reviewer’s side](#reviewers-side)
+    - [What to check for in code reviews](#what-to-check-for-in-code-reviews)
 - [👷 Terraform best practices](#-terraform-best-practices)
 
 Revolgy Delivery team way of work. We create own our guidelines. We change them if they do not fit our work anymore.
@@ -164,7 +172,96 @@ In such a case, we can not just merge `trunk` into the older `release` branch be
         New version with that fix can be now released by procedure described in step 4.
 
 ## 👀 Code review
-TBD
+### Goal
+
+Our code review process aims to:
+
+- Improve readability and maintainability,
+- Improve robustness and prevent the introduction of defects,
+- Leverage the experience of other contributors for each proposed change,
+- Follow compliance with standards relative to the project (ie. OWASP, PCI, etc)
+
+therefore nitpicking some irrelevant issues (such as double whitespaces, grammar mistakes, etc) is not the goal. The goal is to educate each other and learn something from the review. Simply said, don't be a dick. 🙂
+
+**How often to do code review**
+
+Code reviews should be prompt (on the order of hours, not days), therefore a code review should not wait for your response more than a day. The best practice at Revolgy is to reserve an hour of your work-time to do a code review. 
+
+### Reviewee’s side
+
+#### What to review
+
+All developers should have significant changes reviewed before they are committed to the repository.
+
+#### When to submit for a review
+
+Code reviews should happen after automated checks (tests, style, other CI) have completed successfully, but before the code merges to the repository’s mainline branch.
+
+#### Preparing code for a review
+
+It’s better to prepare MRs so we save the reviewer’s time and motivation. Here are the main things to look for:
+
+- **Scope and size** - Changes should have a **narrow, well-defined, self-contained scope** that they cover exhaustively. For example, a change may implement a new feature or fix a bug. Shorter changes are preferred over longer ones. If a MR makes substantive changes to more than one independent functionality, consider splitting it into multiple separated MRs.
+- Provide a helpful **MR description**. Just a few sentences can help with understanding what the code change is about.
+- Submit **complete, self-reviewed** (by diff), and **self-tested** MRs. I.e make sure they pass all builds as well as all tests and code quality checks.
+- Follow guidelines for the language of the project (such as for [Terraform](https://www.notion.so/Revolgy-Terraform-guidelines-72e07ee7f83b493dbe0e1418ff704eee))
+- **Refactoring changes** should not alter behavior. Also behavior-changing changes should avoid refactoring (consider splitting those two into separated MRs).
+- Test before submitting the review. Make sure that submitted changes are working as expected.
+
+#### Finding reviewers
+
+Look for at least two reviewers and add the whole team (but at least one) for the MR. The best option is to look for someone who is already familiar with the project (in case you already collaborate on the project with someone).
+
+You need to explicitly add a reviewer to your merge request/commit. 
+
+When you’re still unsure about the code (or a review from a primary reviewer), you may look for another person to review the MR, who is not being familiar with the project.
+
+For our initial phase of code reviewing, code reviews will be performed only by people working on the project directly (included on statuses, etc.).
+
+### Reviewer’s side
+
+#### What to check for in code reviews
+
+Assuming the author of the MR paid attention to the **Preparing code for review** chapter and followed it, here’s a list to which reviewer should pay attention to:
+
+**Purpose**
+
+- **Does this code accomplish the author’s purpose?** Every change should have a specific reason (new feature, refactor, bugfix, etc). Does the submitted code actually accomplish this purpose?
+- **Ask questions.** Functions and classes should exist for a reason. When the reason is not clear to the reviewer, this may be an indication that it should be explained more thoroughly.
+
+**Implementation**
+
+- **How you would have solved the problem?** If it’s different, why is that? Does your (imaginary) code handle more (edge) cases? Is it shorter/easier/cleaner/faster/safer yet functionally equivalent? Is there some underlying pattern you spotted that isn’t captured by the current code?
+- **Do you see any potential for useful abstractions?** Partially duplicated code often indicates that a more abstract or general piece of functionality can be extracted and then reused in different contexts.
+- **Does the change follow standard patterns?** Established codebases often exhibit patterns around naming conventions, program logic decomposition, data type definitions, etc. It is usually desirable that changes are implemented in accordance with existing patterns.
+- Check for **new dependencies**. If the MR added a dependency, does it make sense? Is it necesary?
+
+**Legibility and code style**
+
+- **Reading experience.** Did you grasp the concepts in a reasonable amount of time?
+- Is the **code consistent with the project in terms of style**, API conventions, etc?
+
+**Maintainability**
+
+- **Does this change break backward compatibility?**
+- **Does this code need (integration) tests?**
+- **Was the documentation of the added part updated? Is the documentation explanatory?**
+
+**Security**
+
+Verify that API endpoints perform appropriate authorization and authentication consistent with the rest of the codebase. Check for other common weaknesses, e.g., weak configuration, malicious user input, missing log events, etc. When in doubt, refer the CR to an application security expert.
+
+Last but not least, praise concise/readable/efficient/elegant code. 🙂  Every review request must get a well-written description of why it was or wasn't approved. We do not blame each other, we do not judge each other, we help each other to learn. Everybody does mistakes.
+
+---
+
+TL;DR:
+
+- Every pull request / merge request must be approved at least by 1 other engineer in the repository. Approver and requester cannot be the same person.
+- The Pull request cannot be approved by person writing the code.
+
+![CodeQuality](./img/code-quality.png?raw=true)
+
 
 ## 👷 Terraform best practices
 TBD
