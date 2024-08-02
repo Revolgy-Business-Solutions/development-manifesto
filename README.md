@@ -245,11 +245,13 @@ git merge trunk
 
 ### Definitions
 
-TODO explain PR/MR based on platform
+- **merge request**: (or **pull request**) on most Git platforms, a merge request is a form of keeping track of changes that are proposed to be merged into a different branch, usually the main protected branch. Usually, it can be set so that only the "maintainer" or "owner" of the repository can accept the MR, and this person can also directly request that changes be made to the MR before acceptance through discussion.
 
 ### Abstract
 
-TODO short version of code review
+Merge Requests should be set so that they cannot be accepted by the same person who wrote the code. 
+
+These rules may be relaxed temporarily at the beginning of a project when a tight-knit group is doing the work.
 
 ### Applied code review
 
