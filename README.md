@@ -184,7 +184,7 @@ remote:
 
 Clicking on the link should take you to the MR creation form with the important fields (source branch, target branch) already filled in.
 
-Assign reviewers (i.e. people other than yourself) and wait for them to go over your changes and hopefully sign off on them.
+Read the relevant chapter for [[#Applied code review]].
 
 Finally, when the changes have been approved and the CI pipeline has finished successfully, the Merge Request is ready.
 
@@ -249,13 +249,61 @@ git merge trunk
 
 ### Abstract
 
-Merge Requests should be set so that they cannot be accepted by the same person who wrote the code. 
+The code review process aims to:
 
-These rules may be relaxed temporarily at the beginning of a project when a tight-knit group is doing the work.
+- Improve readability and maintainability.
+- Prevent the introduction of defects.
+- Leverage the experience of other contributors for each proposed change.
+- Follow compliance with standards relative to the project (OWASP, PCI...)
+
+Code review should be done for all contributions as they are to be merged into `trunk` (or any other permanent branch) from which releases are to be made.
+
+Nitpicking irrelevant issues, such as white-space errors, grammar mistakes, etc., is not the goal. The goal is to educate each other and learn something from the review.
+
+Merge Requests should be set so that they cannot be accepted by the same person who wrote the code.
+
+Merge Requests should also contain changes to the CI/CD pipeline code so that it can effectively test itself, and reviewers should verify that this has happened.
+
+Reviewers should be at least one maintainer or owner of the code base. If at any point there is doubt that such a number or the quality of reviewers is sufficient, more may be added at any time.
+
+Developers should go over their MR themselves as if they were the reviewer *before* it is submitted for review. This always saves time of the whole group.
+
+When writing the MR description, always provide it. Just a few sentences in your own words can help the others with understanding what the MR is even about.
 
 ### Applied code review
 
-TODO practical examples, templates
+#### Developer's side
+
+Read also [[#Creating a Merge Request]] for the practicalities.
+
+When you push your changes into a new branch and create the Merge Request, the following requirements should already be set in place—if not, set them or ask the maintainer to set them.
+
+- A minimum amount of accepted reviews from reviewers—at the very least just one.
+- CI should pass as a complete success.
+
+When a reviewer points out that something should be changed before acceptance, generally it will not be themselves implementing that change, as that would make them a contributor of the MR and therefore not someone who can do review.
+
+Reviewers may go into the individual lines of code and comment on them, and the review will not go through until the conversations are resolved.
+
+#### Reviewer’s side
+
+- **"Does this code accomplish the author’s purpose?"** Every change should have a specific reason (new feature, refactor, bug-fix, etc). "Does the submitted code actually accomplish this purpose?"
+- **Ask questions.** Functions and classes should exist for a reason. When the reason is not clear to the reviewer, this may be an indication that it should be explained more thoroughly.
+
+- **How you would have solved the problem?** If it’s different, why is that? Does your (imaginary) code handle more (edge) cases? Is it shorter/easier/cleaner/faster/safer yet functionally equivalent? Is there some underlying pattern you spotted that isn’t captured by the current code?
+- **Do you see any potential for useful abstractions?** Partially duplicated code often indicates that a more abstract or general piece of functionality can be extracted and then reused in different contexts.
+- **Does the change follow standard patterns?** Established codebases often exhibit patterns around naming conventions, program logic decomposition, data type definitions, etc. It is usually desirable that changes are implemented in accordance with existing patterns.
+- Check for **new dependencies**. If the MR added a dependency, does it make sense? Is it necesary?
+
+- **Reading experience.** Did you grasp the concepts in a reasonable amount of time?
+- Is the **code consistent with the project in terms of style**, API conventions, etc?
+
+- **Does this change break backward compatibility?**
+- **Does this code need (integration) tests?**
+- **Was the documentation of the added part updated? Is the documentation explanatory?**
+
+- Verify that API endpoints perform appropriate authorization and authentication consistent with the rest of the code base. Check for other common weaknesses, e.g., weak configuration, malicious user input, missing log events, etc. When in doubt, refer the CR to an application security expert.
+- Last but not least, praise concise/readable/efficient/elegant code. Every review request must get a well-written description of why it was or wasn't approved. We do not blame each other, we do not judge each other, we help each other to learn. Everybody makes mistakes.
 
 ## Terraform structuring and best practices (Git, Terraform)
 
