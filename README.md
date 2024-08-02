@@ -72,11 +72,167 @@ Tagged releases can be then deployed by a CD pipeline.
 
 If we run into a situation when we need to back-port something into an older release branch which is not in sync with `trunk` anymore, we `cherry-pick` a single commit from the `trunk` and tag a new version of this older release.
 
-### Applied TBD
+### Applied Trunk Based Development
 
-TODO actual description of TBD
+#### Committing
 
 ![Diagram](./img/trunk_based_development.png)
+
+When creating a repository, always set `trunk` as the default branch (in place of what otherwise would be `main` or historically `master`) and on your Git platform of choice, set the `trunk` branch to be protected so that not just anyone can push to it.
+
+Clone the repository locally:
+
+```sh
+git clone "git@example.org:acme/tbd.git"
+```
+
+**ENSURE YOU HAVE THE TRUNK UPSTREAM SET**:
+
+```sh
+git branch -u origin/trunk trunk
+```
+
+When making changes and starting a new branch for them, make sure that your local `trunk` is in sync with the remote. Other people can make changes to the repository, and you would waste time by having to re-base your work afterwards.
+
+```sh
+# Fetch changes on the remotes
+git fetch
+# Examine changes
+git log --all --graph --oneline
+
+# Ensure you have the trunk branch checked out
+git switch trunk
+
+# If you had some work (accidentally) committed to trunk that isn't on the remote, consider making a branch for it.
+git switch -c branchname
+# Or if you have some changes that aren't even committed yet, you may either commit them...
+git commit -m 'Description of commit up to 80 chars'
+# ... or stash them locally
+git stash
+
+# If there weren't any history disruptions, you may simply run the following command. This will set your local trunk to origin/trunk.
+git pull --ff-only
+
+# If you had committed some work that you would like to abandon, you could always reset.
+git reset --hard origin/trunk
+```
+
+You can theoretically also do all of that with just this command, however you will still have to handle the possible case of not having pushed your local changes.
+
+```sh
+git pull --rebase
+```
+
+Now, create your off-shoot branch.
+
+```sh
+git switch -c feature/foo
+```
+
+If you would like to skip synchronizing your local `trunk` with `origin`, you can also create the branch directly off it, but it is recommended to keep things in sync.
+
+```sh
+git switch -c feature/foo origin/trunk
+```
+
+Now, make your changes and commit them as you normally would.
+
+```sh
+git add ...
+git commit -m '...'
+```
+
+If you have made several commits and would like to squash them or edit their commit messages, you can run the following command. This will open an editor (probably `nano`) where there will be instructions on what you can do with it.
+
+```sh
+git rebase -i COMMIT_SHA
+# The -i stands for interactive.
+# The COMMIT_SHA can be found by running git log --all --graph --oneline and finding the commit SHA where your branch split off, like 5f271293.
+# You can also use a branch name in place of the SHA, but there will be cases where that commit no longer has a branch name on it.
+```
+
+If in the meantime someone made changes, fetch and re-base.
+
+```sh
+git fetch
+# inspect changes
+git rebase origin/trunk
+```
+
+And finally push.
+
+```sh
+git push origin feature/foo
+```
+
+#### Creating a Merge Request
+
+Whenever you push to GitLab or any other Git platform, the output of the `push` command should show something like the following
+
+```
+remote:
+remote: To create a merge request for feature/non-prod-env, visit:
+remote:   [https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request[source_branch]=feature%2Fnon-prod-env](https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request%5Bsource_branch%5D=feature%2Fnon-prod-env)
+remote:
+```
+
+Clicking on the link should take you to the MR creation form with the important fields (source branch, target branch) already filled in.
+
+Assign reviewers (i.e. people other than yourself) and wait for them to go over your changes and hopefully sign off on them.
+
+Finally, when the changes have been approved and the CI pipeline has finished successfully, the Merge Request is ready.
+
+Click the "Merge" button and the Git platform will automatically add your changes to the target branch—`trunk`.
+
+Ideally, if there is the option to do it, make the platform also delete its version of your branch. If the option isn't there or if you simply want to do it yourself for whatever reason, run the following command:
+
+```sh
+git push --delete origin feature/foo
+```
+
+You may also want to delete your local version of it too.
+
+```sh
+# If the changes have been merged and are currently in sync
+git branch -d feature/foo
+
+# If the changes are already out of sync but you're sure you won't lose any data, you may force-delete the branch
+git branch -D feature/foo
+```
+
+#### Releasing
+
+When a major version of a product is out, it is needed to cut the new release branch which will track the life of this major version until next release will come.
+
+Each release should be branched off the current `trunk`. So first of all make sure that you have checked out the `trunk` branch and it is up to date with the upstream:
+
+```sh
+git switch trunk
+git pull --rebase
+```
+
+Now create the new release branch and push it into upstream:
+
+```sh
+git switch -c release/1
+git push -u origin release/1
+```
+
+Also you can tag the very first version of the new release. **This will be a repeated action for every new released version.**
+
+```sh
+git tag release-1.0
+git push --tags
+```
+
+The current `release` branch should go along with the `trunk`. So `trunk` should be periodically merged into the current `release`.
+
+```sh
+git switch trunk
+git pull --rebase
+git switch release/1
+git merge trunk
+```
 
 ## Code review (Git, GitLab, GitHub)
 
