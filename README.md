@@ -27,11 +27,14 @@ We primarily use the following technologies:
 
 ### Strategies
 
-TODO describe why
+At Revolgy, we have elected to use the following procedures, processes, or strategies.
 
 - [Trunk Based Development]
+	- ... is a branching strategy for Git.
 - [Code Review]
+	- ... is the idea that all code that gets released is looked at by more than 1 person.
 - [CI/CD]
+	- ... is the process that automatically runs tests and builds the software—or in our case, the infrastructure.
 
 ## Trunk Based Development (Git)
 
