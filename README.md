@@ -103,17 +103,21 @@ git log --all --graph --oneline
 # Ensure you have the trunk branch checked out
 git switch trunk
 
-# If you had some work (accidentally) committed to trunk that isn't on the remote, consider making a branch for it.
+# If you had some work (accidentally) committed to trunk that isn't on the
+# remote, consider making a branch for it.
 git switch -c branchname
-# Or if you have some changes that aren't even committed yet, you may either commit them...
+# Or if you have some changes that aren't even committed yet, you may either
+# commit them...
 git commit -m 'Description of commit up to 80 chars'
 # ... or stash them locally
 git stash
 
-# If there weren't any history disruptions, you may simply run the following command. This will set your local trunk to origin/trunk.
+# If there weren't any history disruptions, you may simply run the following
+# command. This will set your local trunk to origin/trunk.
 git pull --ff-only
 
-# If you had committed some work that you would like to abandon, you could always reset.
+# If you had committed some work that you would like to abandon, you could
+# always reset.
 git reset --hard origin/trunk
 ```
 
@@ -147,8 +151,10 @@ If you have made several commits and would like to squash them or edit their com
 ```sh
 git rebase -i COMMIT_SHA
 # The -i stands for interactive.
-# The COMMIT_SHA can be found by running git log --all --graph --oneline and finding the commit SHA where your branch split off, like 5f271293.
-# You can also use a branch name in place of the SHA, but there will be cases where that commit no longer has a branch name on it.
+# The COMMIT_SHA can be found by running git log --all --graph --oneline
+# and finding the commit SHA where your branch split off, like 5f271293.
+# You can also use a branch name in place of the SHA, but there will be cases
+# where that commit no longer has a branch name on it.
 ```
 
 If in the meantime someone made changes, fetch and re-base.
@@ -196,7 +202,8 @@ You may also want to delete your local version of it too.
 # If the changes have been merged and are currently in sync
 git branch -d feature/foo
 
-# If the changes are already out of sync but you're sure you won't lose any data, you may force-delete the branch
+# If the changes are already out of sync but you're sure you won't lose any
+# data, you may force-delete the branch
 git branch -D feature/foo
 ```
 
