@@ -6,6 +6,8 @@ TODO general description, we the people
 
 TODO mention that content in quotes is optional reading
 
+TODO mention that everything should be done diligently and responsibly.
+
 ### Technologies
 
 We primarily use the following technologies:
@@ -35,20 +37,46 @@ At Revolgy, we have elected to use the following procedures, processes, or strat
 	- ... is the idea that all code that gets released is looked at by more than 1 person.
 - [CI/CD]
 	- ... is the process that automatically runs tests and builds the software—or in our case, the infrastructure.
+	- **Note**: This guide assumes that the environment is set so that **EVERY CHANGE IS TESTED** before ultimately being used. 
 
 ## Trunk Based Development (Git)
 
 ### Definitions
 
-TODO requirements that reader knows basic git commands
+This section requires that the reader know the basic usage of **Git**.
+
+- **commit**: in Git, a commit is a collection of files in a tree, and the commit usually has a preceding commit.
+- **branch**: in Git, a branch is a name for a specific commit and therefore its history as well. Branches can be updated by **push**ing, and pushing cannot change history—unless with `--force` on branches that aren't protected.
+- **protected branch**: on most Git platforms, a protected branch is a branch that cannot be pushed to directly, or at least not by non-owners, and has to be merged to, usually with Code Review.
+- **rebase**: in Git, a rebase is the act of taking a branch that split off from its parent branch at some point in the past, and re-committing on top of a different (usually newer) commit.
+- **merge**: in Git, a merge is the act of joining two branches together. There are several strategies that Git can use based on the circumstances.
+	- **fast-forward**: a fast-forward merge requires that the branch that is getting merged be based on top of the branch that its getting merged into. The fact that the off-branch is in such a position means that any merge conflicts (or rebase conflicts) have already been resolved. Then, it can simply be updated with all those new commits.
+	- **merge commit**: a merge commit is a special type of commit that has two parent commits, effectively joining them. The use of a merge commit may sometimes lead to there being a merge conflict, which has to be resolved manually.
+- **merge request**: (or **pull request**) on most Git platforms, a merge request is a form of keeping track of changes that are proposed to be merged into a different branch, usually the main protected branch. Usually, it can be set so that only the "maintainer" or "owner" of the repository can accept the MR, and this person can also directly request that changes be made to the MR before acceptance through discussion.
 
 ### Abstract
 
-TODO short version of TBD
+`trunk` is the main branch of the repository. It is protected and _shouldn't_ be pushed into directly under normal circumstances.
+
+Every change is being developed in its own temporary branch created off `trunk`.
+
+Changes are to be accepted only after CI and Code Review, and new test coverage must be part of the Merge Request if applicable.
+
+`trunk` is an active rolling branch with the latest code which can (and should) be continuously deployed into a **testing** environment.
+
+To cut a new release, a `release` branch is created and the release commit is **tag**ged with a version number. Stick to [Semantic Versioning].
+
+Tagged releases can be then deployed by a CD pipeline.
+
+`trunk` branch is periodically merged into the current `release` and when a new version of the current release should be issued, appropriate commit is being tagged with new version number.
+
+If we run into a situation when we need to back-port something into an older release branch which is not in sync with `trunk` anymore, we `cherry-pick` a single commit from the `trunk` and tag a new version of this older release.
 
 ### Applied TBD
 
 TODO actual description of TBD
+
+![Diagram](./img/trunk_based_development.png)
 
 ## Code review (Git, GitLab, GitHub)
 
@@ -111,3 +139,4 @@ TODO stages with CI/CD not running that part of terraform to save time
 [torvalds/linux.git]: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 [stable/linux.git]: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
 [Linux]: https://kernel.org/
+[Semantic Versioning]: https://semver.org/
