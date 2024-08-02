@@ -95,12 +95,12 @@ git branch -u origin/trunk trunk
 When making changes and starting a new branch for them, make sure that your local `trunk` is in sync with the remote. Other people can make changes to the repository, and you would waste time by having to re-base your work afterwards.
 
 ```sh
-# Fetch changes on the remotes
+# Fetch changes on the remotes.
 git fetch
-# Examine changes
+# Examine changes.
 git log --all --graph --oneline
 
-# Ensure you have the trunk branch checked out
+# Ensure you have the trunk branch checked out.
 git switch trunk
 
 # If you had some work (accidentally) committed to trunk that isn't on the
@@ -109,7 +109,7 @@ git switch -c branchname
 # Or if you have some changes that aren't even committed yet, you may either
 # commit them...
 git commit -m 'Description of commit up to 80 chars'
-# ... or stash them locally
+# ... or stash them locally.
 git stash
 
 # If there weren't any history disruptions, you may simply run the following
@@ -199,11 +199,11 @@ git push --delete origin feature/foo
 You may also want to delete your local version of it too.
 
 ```sh
-# If the changes have been merged and are currently in sync
+# If the changes have been merged and are currently in sync.
 git branch -d feature/foo
 
 # If the changes are already out of sync but you're sure you won't lose any
-# data, you may force-delete the branch
+# data, you may force-delete the branch.
 git branch -D feature/foo
 ```
 
