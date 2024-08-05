@@ -453,11 +453,185 @@ Options for remote state:
 
 ### CI/CD
 
-TODO basic stuff
+In CI/CD, always conform to the best practices for both performance and usability on your platform of choice.
+
+Check every commit with fast and cheap tests, such as `terraform fmt`.
+
+Check every commit *that is going into trunk or a release branch* with `terraform validate`.
+
+Perform as many repeating tasks automatically, with the exception of `terraform apply` unless you're confident.
 
 ### Optimization for CI/CD performance
 
-TODO stages with CI/CD not running that part of terraform to save time
+If possible, cache the `.terraform` directory in your CI/CD system, as it stores useful files, which Terraform will re-download when appropriate.
+
+Do not use artifact storage for `.terraform`. Only use artifact storage for the plan file.
+
+### Example `.gitlab-ci.yml`
+
+**Warning: Update container versions with the file before use!**
+
+**Note the environment variables in the file, they need to be filled in!**
+
+This GitLab CI document deploys a Terraform codebase to 3 environments (as defined in GitLab), and it is set to validate each and every commit via the first few stages.
+
+- `lint`
+	- Also includes a check for `README.md` being up-to-date via `terraform-docs`.
+	- Checks if the files are formatted, effectively ruling out some very bad commits from the get-go as the formatter needs valid code.
+- `init`
+	- This `init` doesn't actually interact with the backend, as it would lock it for some time, which would be suboptimal for high usage repositories. It is mainly for `validate`, there is another `terraform init` during `plan`
+- `validate`
+	- Runs a deeper validation of the code itself. It checks for things like wrong variable names, missing required arguments, etc.
+
+Caching of `.terraform` is also already in place.
+
+- `plan` - **Runs only in Merge Requests to GL environments!**
+	- Runs a `terraform init` against the real backend.
+	- Runs `terraform plan`.
+	- Generates a report of the plan in a JSON format for easy viewing in GitLab.
+- `apply` - **Runs only after apply.**
+	- Manual step.
+	- Runs `terraform apply` with the plan from before.
+
+```yaml
+---
+
+stages:
+  # Run quick checks if everything is formatted and updated
+  - lint
+
+  # Initialize Terraform working directory
+  - init
+
+  # Runs a deeper lint
+  - validate
+
+  # Creates a plan for deployment
+  - plan
+
+  # Applies deployment (has to be approved manually)
+  - apply
+
+variables:
+  TF_PLAN_FILE: tf_plan_file
+  JSON_PLAN_FILE: tf_plan.json
+  TERRAFORM_TF_VARS_FILE: terraform.tfvars
+
+image:
+  name: hashicorp/terraform:1.7.3
+  entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+cache:
+  paths:
+    - .terraform
+    - .terraform.lock.hcl
+
+# Stages
+
+# Checks if README.md is up-to-date.
+# Update it by running `terraform-docs .` and committing README.md.
+terraform-docs:
+  image:
+    name: quay.io/terraform-docs/terraform-docs:0.16.0
+    entrypoint:
+      - '/usr/bin/env'
+  stage: lint
+  dependencies: []
+  needs: []
+  script:
+    - terraform-docs . --output-check
+
+# Checks if Terraform code is formatted using `terraform fmt`.
+terraform-fmt:
+  stage: lint
+  dependencies: []
+  needs: []
+  script:
+    - terraform fmt -no-color -check
+
+# Initializes working directory by "creating initial files, loading any remote
+# state, downloading modules".
+# But it won't be loading any remote state due to -backend=false
+init:
+  stage: init
+  before_script:
+    - terraform version
+  script:
+    - terraform init -no-color -backend=false -upgrade
+
+# Validate the configuration files in a directory, referring only to the
+# configuration and not accessing any remote services such as remote state,
+# provider APIs, etc.
+validate:
+  stage: validate
+  dependencies: ["init"]
+  script:
+    - terraform validate -no-color .
+
+# Generates a speculative execution plan, showing what actions Terraform
+# would take to apply the current configuration. This command will not
+# actually perform the planned actions.
+.plan:
+  stage: plan
+  dependencies: ["init"]
+  before_script:
+    - apk --no-cache add jq
+  script:
+    - terraform init -no-color -reconfigure -backend-config="bucket=$ENV_TF_BACKEND_BUCKET" -backend-config="prefix=$ENV_TF_BACKEND_PREFIX"
+    - terraform plan -no-color -var-file=$TERRAFORM_TF_VARS_FILE -var-file=$ENV_TF_VARS_FILE -out=$TF_PLAN_FILE
+    - terraform show -no-color --json $TF_PLAN_FILE | jq -r '([.resource_changes[]?.change.actions?]|flatten)|{"create":(map(select(.=="create"))|length),"update":(map(select(.=="update"))|length),"delete":(map(select(.=="delete"))|length)}' > $JSON_PLAN_FILE
+  artifacts:
+    reports:
+      terraform: $JSON_PLAN_FILE
+    paths:
+      - $TF_PLAN_FILE
+    expire_in: 1 week
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_ENVIRONMENT_NAME
+      allow_failure: false
+    - if: $CI_COMMIT_BRANCH == $CI_ENVIRONMENT_NAME
+      allow_failure: false
+
+plan-dev:
+  extends: .plan
+  environment: dev
+
+plan-stg:
+  extends: .plan
+  environment: stg
+
+plan-prd:
+  extends: .plan
+  environment: prd
+
+# Creates or updates infrastructure according to Terraform configuration
+# files in the current directory.
+.apply:
+  stage: apply
+  script:
+    - terraform apply -no-color -auto-approve -input=false $TF_PLAN_FILE
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_ENVIRONMENT_NAME
+      when: manual
+      allow_failure: false
+
+apply-dev:
+  extends: .apply
+  dependencies: ["init", "plan-dev"]
+  environment: dev
+
+apply-stg:
+  extends: .apply
+  dependencies: ["init", "plan-stg"]
+  environment: stg
+
+apply-prd:
+  extends: .apply
+  dependencies: ["init", "plan-prd"]
+  environment: prd
+```
 
 [Git]: https://git-scm.com/
 [Trunk Based Development]: https://trunkbaseddevelopment.com/
