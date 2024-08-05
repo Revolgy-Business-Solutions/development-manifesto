@@ -299,29 +299,157 @@ Reviewers may go into the individual lines of code and comment on them, and the 
 
 ## Terraform structuring and best practices (Git, Terraform)
 
-### Project structure options
+### Standard project structure
 
-TODO table of "projects", "modules"...
+Terraform defines a [Standard Module Structure]. Please read it, practically all modules go by it and so should we.
 
-TODO gitignore
+Some excerpts from the Standard Module Structure below.
+
+> **`main.tf`, `variables.tf`, `outputs.tf`**. These are the recommended filenames for a minimal module, even if they're empty. `main.tf` should be the primary entrypoint. For a simple module, this may be where all the resources are created. For a complex module, resource creation may be split into multiple files but any nested module calls should be in the main file. `variables.tf` and `outputs.tf` should contain the declarations for variables and outputs, respectively.
+
+Terraform also automatically loads a number of variable definitions files if they are present:
+
+- Files named exactly `terraform.tfvars` or `terraform.tfvars.json`.
+- Any files with names ending in `.auto.tfvars` or `.auto.tfvars.json`.
+
+Always include also a `versions.tf` file to set in ~~stone~~ file the versions of providers and of Terraform itself.
+
+```hcl
+# Figure out current versions by running `terraform version`
+
+terraform {
+  required_version = "~> 1.9.0"
+
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "5.35.0"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "5.35.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.2"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "3.6.2"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = "0.11.2"
+    }
+  }
+}
+```
+
+> **Variables and outputs should have descriptions.** All variables and outputs should have one or two sentence descriptions that explain their purpose. This is used for documentation.
+
+> Nested modules. Nested modules should exist under the modules/ subdirectory. Any nested module with a README.md is considered usable by an external user. If a README doesn't exist, it is considered for internal use only. These are purely advisory; Terraform will not actively deny usage of internal modules. Nested modules should be used to split complex behavior into multiple small modules that advanced users can carefully pick and choose. For example, the Consul module has a nested module for creating the Cluster that is separate from the module to setup necessary IAM policies. This allows a user to bring in their own IAM policy choices.
+> 
+>If the root module includes calls to nested modules, they should use relative paths like ./modules/consul-cluster so that Terraform will consider them to be part of the same repository or package, rather than downloading them again separately.
+>
+>If a repository or package contains multiple nested modules, they should ideally be composable by the caller, rather than calling directly to each other and creating a deeply-nested tree of modules.
+
+> **Examples**. Examples of using the module should exist under the `examples/` subdirectory at the root of the repository. Each example may have a README to explain the goal and usage of the example. Examples for submodules should also be placed in the root `examples/` directory.
+> 
+> Because examples will often be copied into other repositories for customization, any `module` blocks should have their `source` set to the address an external caller would use, not to a relative path.
+
+### `README.md`
+
+**Every** Terraform code base, regardless of whether it is a project or a module, should have a README.
+
+Use the [terraform-docs] command to generate the strictly technical parts of it. This process can (and should) be automated. [Link](https://github.com/terraform-docs/terraform-docs/blob/master/docs/USER_GUIDE.md#integrating-with-your-terraform-repository)
+
+```sh
+terraform-docs markdown . > README.md
+```
+
+### Using Upstream Modules
+
+Upstream modules (modules downloaded from the internet) **should not be referenced** directly.
+
+When planning to use a upstream module, one should fetch the module and store it in either git repository for upstream modules or a new repository created specifically for the module, depending on poly-repo or mono-repo preferences. 
+
+This eases version management.
+
+### Including modules
+
+Always include modules through Terraform itself. **Do not use Git submodules**, they are a pain to work with.
+
+There is a lot of ways to include a module, depending on what your needs are.
+
+```hcl
+module "local" {
+	source = "./modules/foo"
+}
+```
+
+```hcl
+module "git_over_https" {
+	source = "git::https://example.com/foo.git?ref=v1.2.0"
+}
+```
+
+```hcl
+module "git_over_ssh" {
+	source = "git::git@github.com:example/foo.git//path/within/repo"
+}
+```
+
+### `.gitignore`
+
+Always include a `.gitignore` file in a Terraform codebase, but **do not ignore the `.terraform.lock.hcl` file!** It's the equivalent of a NodeJS package lock, it makes the included modules have an exactly fixed version.
+
+```
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data, such as
+# password, private keys, and other secrets. These should not be part of version 
+# control as they are data points which are potentially sensitive and subject 
+# to change depending on the environment.
+*.tfvars
+*.tfvars.json
+!terraform.tfvars
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include override files you do wish to add to version control using negated pattern
+# !example_override.tf
+
+# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
+# example: *tfplan*
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+```
 
 ### Remote state
 
-TODO best practices for remote state
+Avoid use of specific non-standard magic glue solutions, such as `Makefile`s, `bash` scripts, etc.
 
-### Writing modules
+Options for remote state:
 
-TODO standard structure of modules based on official recommendation
-
-TODO methodology for what inputs and outputs there should be
-
-TODO write description everywhere in outputs and inputs
-
-### Using modules
-
-TODO using local modules
-
-TODO using remote modules
+- One environment = one account + shared account for state
+- Multiple environments in one account differentiated either on VPC level or via tags etc...
 
 ### CI/CD
 
@@ -345,3 +473,4 @@ TODO stages with CI/CD not running that part of terraform to save time
 [stable/linux.git]: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
 [Linux]: https://kernel.org/
 [Semantic Versioning]: https://semver.org/
+[Standard Module Structure]: https://developer.hashicorp.com/terraform/language/modules/develop/structure
