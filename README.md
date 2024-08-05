@@ -1,13 +1,5 @@
 # Revolgy Development Manifesto
 
-## About
-
-TODO general description, we the people
-
-TODO mention that content in quotes is optional reading
-
-TODO mention that everything should be done diligently and responsibly.
-
 ### Technologies
 
 We primarily use the following technologies:
