@@ -23,12 +23,17 @@ We primarily use the following technologies:
 
 At Revolgy, we have elected to use the following procedures, processes, or strategies.
 
+We all need to have a common way of working with the tools with which we, engineers, use to build the environments and software. 
+
 - [Trunk Based Development]
 	- ... is a branching strategy for Git.
+	- Trunk Based Development has been chosen over the alternatives for its simplicity and compatibility with infrastructure code bases.
 - [Code Review]
 	- ... is the idea that all code that gets released is looked at by more than 1 person.
+	- This is so that one person can't just release something on a whim.
 - [CI/CD]
 	- ... is the process that automatically runs tests and builds the software—or in our case, the infrastructure.
+	- The motivation behind including CI/CD is that we have a unified environment for both "I" and "D" so that no one developer's setup can be the point of failure.
 	- **Note**: This guide assumes that the environment is set so that **EVERY CHANGE IS TESTED** before ultimately being used. 
 
 ## Trunk Based Development (Git)
