@@ -168,10 +168,8 @@ git push origin feature/foo
 Whenever you push to GitLab or any other Git platform, the output of the `push` command should show something like the following
 
 ```
-remote:
 remote: To create a merge request for feature/non-prod-env, visit:
 remote:   [https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request[source_branch]=feature%2Fnon-prod-env](https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request%5Bsource_branch%5D=feature%2Fnon-prod-env)
-remote:
 ```
 
 Clicking on the link should take you to the MR creation form with the important fields (source branch, target branch) already filled in.
