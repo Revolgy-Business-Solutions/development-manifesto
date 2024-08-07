@@ -174,7 +174,7 @@ remote:   [https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?
 
 Clicking on the link should take you to the MR creation form with the important fields (source branch, target branch) already filled in.
 
-Read the relevant chapter for [[#Applied code review]].
+Read the relevant chapter for [Applied code review](#applied-code-review).
 
 Finally, when the changes have been approved and the CI pipeline has finished successfully, the Merge Request is ready.
 
@@ -264,7 +264,7 @@ When writing the MR description, always provide it. Just a few sentences in your
 
 #### Developer's side
 
-Read also [[#Creating a Merge Request]] for the practicalities.
+Read also [Creating a Merge Request](#creating-a-merge-request) for the practicalities.
 
 When you push your changes into a new branch and create the Merge Request, the following requirements should already be set in place—if not, set them or ask the maintainer to set them.
 
@@ -359,7 +359,7 @@ terraform {
 
 **Every** Terraform code base, regardless of whether it is a project or a module, should have a README.
 
-Use the [terraform-docs] command to generate the strictly technical parts of it. This process can (and should) be automated. [Link](https://github.com/terraform-docs/terraform-docs/blob/master/docs/USER_GUIDE.md#integrating-with-your-terraform-repository)
+Use the [terraform-docs] command to generate the strictly technical parts of it. This process can (and should) be automated. [Link](https://github.com/terraform-docs/terraform-docs/blob/master/docs/user-guide/introduction.md)
 
 ```sh
 terraform-docs markdown . > README.md
