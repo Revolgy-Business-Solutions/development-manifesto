@@ -359,7 +359,7 @@ terraform {
 
 **Every** Terraform code base, regardless of whether it is a project or a module, should have a README.
 
-Use the [terraform-docs] command to generate the strictly technical parts of it. This process can (and should) be automated. [Link](https://github.com/terraform-docs/terraform-docs/blob/master/docs/user-guide/introduction.md)
+Use the [`terraform-docs`][terraform-docs] command to generate the strictly technical parts of it. This process can (and should) be automated. [Link](https://github.com/terraform-docs/terraform-docs/blob/master/docs/user-guide/introduction.md)
 
 ```sh
 terraform-docs markdown . > README.md
