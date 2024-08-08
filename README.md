@@ -1,267 +1,653 @@
-- [🌲 Trunk-based development](#-trunk-based-development)
-  - [Overview](#overview)
-  - [Trunk-based development flow](#trunk-based-development-flow)
-- [👀 Code review](#-code-review)
-  - [Goal](#goal)
-  - [Reviewee’s side](#reviewees-side)
-    - [What to review](#what-to-review)
-    - [When to submit for a review](#when-to-submit-for-a-review)
-    - [Preparing code for a review](#preparing-code-for-a-review)
-    - [Finding reviewers](#finding-reviewers)
-  - [Reviewer’s side](#reviewers-side)
-    - [What to check for in code reviews](#what-to-check-for-in-code-reviews)
-- [👷 Terraform best practices](#-terraform-best-practices)
+# Revolgy Development Manifesto
 
-Revolgy Delivery team way of work. We create own our guidelines. We change them if they do not fit our work anymore.
+### Technologies
 
-## 🌲 Trunk-based development
-`Trunk` is a main rolling branch. Releases are cut from the `trunk` branch. There are also several approaches on how to cut releases with trunk-based workflow: e.g. [from the `trunk` directly](https://trunkbaseddevelopment.com/release-from-trunk/) or [from separate release branch](https://trunkbaseddevelopment.com/branch-for-release/).
+We primarily use the following technologies:
 
-### Overview
+- [Git]
+- [Terraform]
 
-- There are no `feature` or `hotfix` branches, only one continuous branch exists and it is `trunk`. Every change is being developed in its own temporary branch created off `trunk`.
-- Any change cannot be directly merged without testing, tests executed and the test coverage must be part of MR/PR.
-- The developer or engineer does not have to pick a correct branch to start his/her work: for each feature, fix, whatever we create a temporary branch with a descriptive name (e.g. `feature:mTLS_support` or `chore:dependencies_cleanup`) deleted after the tests and successful merge approval.
-- `trunk` is an active rolling branch with the latest code which can (and should) be continuously deployed into the **testing** environment.
-- When we cut a new release, a `release` branch is created and the release commit is being tagged with a version number. Stick to [semantic versioning](https://semver.org/). We follow this logic in versioning {MAJOR**.**MINOR**.**PATCH}.
-  - Semantic versioning rules:
-      1. MAJOR version when you make significant release changes,
-      2. MINOR version when you add functionality in a backward-compatible manner. In Revolgy context this is new feature addition like a new monitoring service eg. Splunk in Terraform.
-      3. PATCH version when you make backward-compatible bug fixes. Here we count also hotfixes.
-- Tagged releases can be then deployed by CI/CD pipeline.
-- `trunk` branch is periodically merged into the current `release` and when a new version of the current release should be issued, appropriate commit is being tagged with new version number.
-- if we run into a situation when we need to backport (or sync-back) something into an older release branch which is not in sync with `trunk` anymore, we cherry-pick a single commit from the `trunk` and tag a new version of this older release.
+**Git** is currently the unofficial standard [Version Control System][VCS]. [Git can be installed on almost any platform][Installing Git] and is supported by most development environments natively.
 
-Related patterns of behavior for code management and branching:
+> Even though most Git repositories seem centralized, for example on [GitHub], Git itself is a distributed VCS.
+> There is no major difference between the repository you might have on your PC, and the repository on your platform of choice—you could _technically_ host the repository on your PC for public viewing.
+> Some more traditional workflows, such as the one of the creator of [Linux] (and also Git itself), [Linus Torvalds], use Git in such a fashion that Linus' own repository is considered to be the main repository of the kernel where he accepts incoming changes via email and only when he pushes it to [torvalds/linux.git] is it considered an officially accepted change of the "mainline" kernel. Other Kernel developers and maintainers have their own Linux repositories. [stable/linux.git] hosts the "stable" kernel. While it is technically a different repository, it has mostly the same commits with mostly the same history as the "mainline" kernel, and so you might have linux.git locally with both the "mainline" and the "stable" repositories as remotes.
 
-- Peer review is mandatory and should be done thoroughly and responsibly
-- Each MR should be continuously tested
-- squash and merge all the MRs, again with reasonable commit message.
-  - except when syncing `trunk` into `release` (to preserve history for potential cherry-picking)
-- MR should contain reasonable description. See the template:
+**Terraform** is a [Infrastructure-as-Code][IaC] tool.
 
-```markdown
-	This MR contains a feature set regarding the new API update for WAF v2.0 with new rules for CoolClient.io.
-> ⚠️ NOTE: IMPORTANT SHORT MESSAGE - DELETES, OPS NOTE ETC.
+> Terraform is really a relatively simple tool which through its providers is capable of provisioning infrastructure on almost any cloud platform with an API.
+> On each run of Terraform, it checks the entirety of the current state and code base, which only gets slower with each new resource, and Terraform doesn't have a built-in solution to this problem, other than that there is a simple recommendation to keep its code bases small and in stages.
+> Terraform must be able to resolve the dependency graph as it's written in code, otherwise it won't run.
 
-## Merge type
-| Status  | Type  | Env Vars Change | Traking issue |
-| :---: | :---: | :---: | :--: | :--: |
-| New/Update| Feature/Hotfix/Release | Yes/No | [Link](<ticket link here>) |
+### Strategies
 
+At Revolgy, we have elected to use the following procedures, processes, or strategies.
 
-## Description
-Bla bla bla I am going to the spa.
+We all need to have a common way of working with the tools with which we, engineers, use to build the environments and software. 
 
-## Feature / Hotfix list included
-- feature A
-- feature B
-- feature C
-- Added new rule pack for Cross-site request forgery attack
-- Update for existing ACL
+- [Trunk Based Development]
+	- ... is a branching strategy for Git.
+	- Trunk Based Development has been chosen over the alternatives for its simplicity and compatibility with infrastructure code bases.
+- [Code Review]
+	- ... is the idea that all code that gets released is looked at by more than 1 person.
+	- This is so that one person can't just release something on a whim.
+- [CI/CD]
+	- ... is the process that automatically runs tests and builds the software—or in our case, the infrastructure.
+	- The motivation behind including CI/CD is that we have a unified environment for both "I" and "D" so that no one developer's setup can be the point of failure.
+	- **Note**: This guide assumes that the environment is set so that **EVERY CHANGE IS TESTED** before ultimately being used. 
 
-## Deployment notes
-Notes regarding deployment of the contained body of work. These should note any new dependencies, new scripts, etc.
+## Trunk Based Development (Git)
 
-**New environment variables:**
-- env var : env var Staging variable for Rules
+### Definitions
 
-**New scripts:**
-- script : script details
+This section requires that the reader know the basic usage of **Git**.
 
-**New dependencies:**
-- dependency : dependency details
+- **commit**: in Git, a commit is a collection of files in a tree, and the commit usually has a preceding commit.
+- **branch**: in Git, a branch is a name for a specific commit and therefore its history as well. Branches can be updated by **push**ing, and pushing cannot change history—unless with `--force` on branches that aren't protected.
+- **protected branch**: on most Git platforms, a protected branch is a branch that cannot be pushed to directly, or at least not by non-owners, and has to be merged to, usually with Code Review.
+- **rebase**: in Git, a rebase is the act of taking a branch that split off from its parent branch at some point in the past, and re-committing on top of a different (usually newer) commit.
+- **merge**: in Git, a merge is the act of joining two branches together. There are several strategies that Git can use based on the circumstances.
+	- **fast-forward**: a fast-forward merge requires that the branch that is getting merged be based on top of the branch that its getting merged into. The fact that the off-branch is in such a position means that any merge conflicts (or rebase conflicts) have already been resolved. Then, it can simply be updated with all those new commits.
+	- **merge commit**: a merge commit is a special type of commit that has two parent commits, effectively joining them. The use of a merge commit may sometimes lead to there being a merge conflict, which has to be resolved manually.
+- **merge request**: (or **pull request**) on most Git platforms, a merge request is a form of keeping track of changes that are proposed to be merged into a different branch, usually the main protected branch. Usually, it can be set so that only the "maintainer" or "owner" of the repository can accept the MR, and this person can also directly request that changes be made to the MR before acceptance through discussion.
+
+### Abstract
+
+`trunk` is the main branch of the repository. It is protected and _shouldn't_ be pushed into directly under normal circumstances.
+
+Every change is being developed in its own temporary branch created off `trunk`.
+
+Changes are to be accepted only after CI and Code Review, and new test coverage must be part of the Merge Request if applicable.
+
+`trunk` is an active rolling branch with the latest code which can (and should) be continuously deployed into a **testing** environment.
+
+To cut a new release, a `release` branch is created and the release commit is **tag**ged with a version number. Stick to [Semantic Versioning].
+
+Tagged releases can be then deployed by a CD pipeline.
+
+`trunk` branch is periodically merged into the current `release` and when a new version of the current release should be issued, appropriate commit is being tagged with new version number.
+
+If we run into a situation when we need to back-port something into an older release branch which is not in sync with `trunk` anymore, we `cherry-pick` a single commit from the `trunk` and tag a new version of this older release.
+
+### Applied Trunk Based Development
+
+#### Committing
+
+![Diagram](./img/trunk_based_development.png)
+
+When creating a repository, always set `trunk` as the default branch (in place of what otherwise would be `main` or historically `master`) and on your Git platform of choice, set the `trunk` branch to be protected so that not just anyone can push to it.
+
+Clone the repository locally:
+
+```sh
+git clone "git@example.org:acme/tbd.git"
 ```
-### Trunk-based development flow
 
-![Diagram](./img/trunk_based_development.png?raw=true)
+**ENSURE YOU HAVE THE TRUNK UPSTREAM SET**:
 
-The diagram above shows a complete life cycle of a project managed with trunk based branching flow. Let's take a look at each step in detail. For instance, we are working with project [https://gitlab.com/Revolgy/branching-playground](https://gitlab.com/Revolgy/branching-playground)
+```sh
+git branch -u origin/trunk trunk
+```
 
-1. Implement change (no matter if it is a feature or fix)
-    - If you haven't cloned the repository yet, let's do that: `git clone[git@gitlab.com](mailto:git@gitlab.com):Revolgy/branching-playground.git`
-    and then set default upstream to `trunk`: `git branch -u origin/trunk trunk`
-    - Now when you have the repository cloned and default upstream is set to trunk, create your branch: `git checkout -b feature/non-prod-env` and implement the change you've planned.
-    - After you are happy with the implementation, commit the change with a meaningful comment: `git commit -m "First environment added"`
-    - And push it into upstream: `git push origin feature/non-prod-env`
-    - In the output of git command you'll get a hyperlink for creating a  merge request:
+When making changes and starting a new branch for them, make sure that your local `trunk` is in sync with the remote. Other people can make changes to the repository, and you would waste time by having to re-base your work afterwards.
 
-        ```markdown
-        remote:
-        remote: To create a merge request for feature/non-prod-env, visit:
-        remote:   [https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request[source_branch]=feature%2Fnon-prod-env](https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request%5Bsource_branch%5D=feature%2Fnon-prod-env)
-        remote:
-        ```
+```sh
+# Fetch changes on the remotes.
+git fetch
+# Examine changes.
+git log --all --graph --oneline
 
-    - When creating merge request please fill in Description thoroughly. Also chose relevant reviewers and option to squash commits when MR is accepted.
-    - After merge request is accepted, your change will be in the `trunk` branch
-2. The second step in our diagram is initializing a new Release branch. **When a major version of a product is out, it is needed to cut the new Release branch which will track the life of this major version until next Release will come**.
-    - Each release should be branched off the current trunk. So first of all make sure that you have checked out the `trunk` branch and it is up to date with the upstream:
+# Ensure you have the trunk branch checked out.
+git switch trunk
 
-        ```markdown
-        git checkout trunk
-        git pull -r
-        ```
+# If you had some work (accidentally) committed to trunk that isn't on the
+# remote, consider making a branch for it.
+git switch -c branchname
+# Or if you have some changes that aren't even committed yet, you may either
+# commit them...
+git commit -m 'Description of commit up to 80 chars'
+# ... or stash them locally.
+git stash
 
-    - Now create the new Release branch and push it into upstream:
+# If there weren't any history disruptions, you may simply run the following
+# command. This will set your local trunk to origin/trunk.
+git pull --ff-only
 
-        ```markdown
-        git checkout -b release-1
-        git push origin release-1
-        ```
+# If you had committed some work that you would like to abandon, you could
+# always reset.
+git reset --hard origin/trunk
+```
 
-    - Also you can tag the very first version of the new release. This will be a repeated action for every new released version (Step 4 in the diagram above).
+You can theoretically also do all of that with just this command, however you will still have to handle the possible case of not having pushed your local changes.
 
-        ```markdown
-        git tag release-1.0
-        git push origin release-1.0
-        ```
+```sh
+git pull --rebase
+```
 
-        You can also just push tags instead of specifying `release-1.0`: `git push --tags`
+Now, create your off-shoot branch.
 
-3. The current `release` branch should go along with the `trunk`.  So `trunk` should be periodically merged into the current `release`.
-    - Make sure that you've got synced `trunk` branch:
+```sh
+git switch -c feature/foo
+```
 
-        ```markdown
-        git checkout trunk
-        git pull -r
-        ```
+If you would like to skip synchronizing your local `trunk` with `origin`, you can also create the branch directly off it, but it is recommended to keep things in sync.
 
-    - Now checkout current `release` branch and merge `trunk` into it.
+```sh
+git switch -c feature/foo origin/trunk
+```
 
-        ```markdown
-        git checkout release-1
-        git merge trunk
-        ```
+Now, make your changes and commit them as you normally would.
 
-4. Cut new Release by tagging relevant commit in the current `release` branch, This step has been done in step 2 while creating the first release. Any other release is no different. Just checkout the branch and tag a commit.
-Let's say you want to sync up `trunk` with current `release-1` and create a new release which will be `1.2`
+```sh
+git add ...
+git commit -m '...'
+```
 
-    ```markdown
-    git checkout release-1
-    git merge trunk
-    git tag release-1.2
-    git push --tags
-    ```
+If you have made several commits and would like to squash them or edit their commit messages, you can run the following command. This will open an editor (probably `nano`) where there will be instructions on what you can do with it.
 
-5. The last step in the diagram is backporting a change from the current release to the older one. This option will be used very seldom. For instance, if we fix a critical bug in the current release, but older release which we still support happens to have the same bug.
-In such a case, we can not just merge `trunk` into the older `release` branch because it will lead to merging the whole history and our older `release` will become equal to `trunk`. That is not what we want to achieve. So we should use [git-cherry-picking](https://git-scm.com/docs/git-cherry-pick) to merge a single commit into an older `release`.
-    - Get sha hash of the commit you want to back-port. It can be found in Gitlab of by looking through `git log` output. E.g.:
+```sh
+git rebase -i COMMIT_SHA
+# The -i stands for interactive.
+# The COMMIT_SHA can be found by running git log --all --graph --oneline
+# and finding the commit SHA where your branch split off, like 5f271293.
+# You can also use a branch name in place of the SHA, but there will be cases
+# where that commit no longer has a branch name on it.
+```
 
-        ```markdown
-        commit 9c8b813348bd34d6b974c929dac338d55344b5a5 (HEAD -> release-2, tag: release-2.1, origin/trunk, origin/HEAD, trunk)
-        Author: Anton Vorobiev <anv@revolgy.com>
-        Date:   Mon Dec 28 09:48:44 2020 +0100
+If in the meantime someone made changes, fetch and re-base.
 
-            Resize staging environment to match production
-        ```
+```sh
+git fetch
+# inspect changes
+git rebase origin/trunk
+```
 
-        So in this case commit hash we are interested in is `9c8b813348bd34d6b974c929dac338d55344b5a5`
+And finally push.
 
-    - Now simply checkout the branch you want to merge the change and invoke the `git cherry-pick` command. Let's say our current release branch is `release-2` and you want to merge the change into `release-1`.
+```sh
+git push origin feature/foo
+```
 
-        ```markdown
-        git checkout release-1
-        git pull -r
-        git cherry-pick 9c8b813348bd34d6b974c929dac338d55344b5a5
-        git push origin release-1
-        ```
+#### Creating a Merge Request
 
-        Now after invoking `git log` you will see commit `9c8b813348bd34d6b974c929dac338d55344b5a5` on top of `release-1` branch without any other history from `trunk` or newer release branch.
+Whenever you push to GitLab or any other Git platform, the output of the `push` command should show something like the following
 
-        New version with that fix can be now released by procedure described in step 4.
+```
+remote: To create a merge request for feature/non-prod-env, visit:
+remote:   [https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request[source_branch]=feature%2Fnon-prod-env](https://gitlab.com/Revolgy/branching-playground/-/merge_requests/new?merge_request%5Bsource_branch%5D=feature%2Fnon-prod-env)
+```
 
-## 👀 Code review
-### Goal
+Clicking on the link should take you to the MR creation form with the important fields (source branch, target branch) already filled in.
 
-Our code review process aims to:
+Read the relevant chapter for [Applied code review](#applied-code-review).
 
-- Improve readability and maintainability,
-- Improve robustness and prevent the introduction of defects,
-- Leverage the experience of other contributors for each proposed change,
-- Follow compliance with standards relative to the project (ie. OWASP, PCI, etc)
+Finally, when the changes have been approved and the CI pipeline has finished successfully, the Merge Request is ready.
 
-therefore nitpicking some irrelevant issues (such as double whitespaces, grammar mistakes, etc) is not the goal. The goal is to educate each other and learn something from the review. Simply said, don't be a dick. 🙂
+Click the "Merge" button and the Git platform will automatically add your changes to the target branch—`trunk`.
 
-**How often to do code review**
+Ideally, if there is the option to do it, make the platform also delete its version of your branch. If the option isn't there or if you simply want to do it yourself for whatever reason, run the following command:
 
-Code reviews should be prompt (on the order of hours, not days), therefore a code review should not wait for your response more than a day. The best practice at Revolgy is to reserve an hour of your work-time to do a code review. 
+```sh
+git push --delete origin feature/foo
+```
 
-### Reviewee’s side
+You may also want to delete your local version of it too.
 
-#### What to review
+```sh
+# If the changes have been merged and are currently in sync.
+git branch -d feature/foo
 
-All developers should have significant changes reviewed before they are committed to the repository.
+# If the changes are already out of sync but you're sure you won't lose any
+# data, you may force-delete the branch.
+git branch -D feature/foo
+```
 
-#### When to submit for a review
+#### Releasing
 
-Code reviews should happen after automated checks (tests, style, other CI) have completed successfully, but before the code merges to the repository’s mainline branch.
+When a major version of a product is out, it is needed to cut the new release branch which will track the life of this major version until next release will come.
 
-#### Preparing code for a review
+Each release should be branched off the current `trunk`. So first of all make sure that you have checked out the `trunk` branch and it is up to date with the upstream:
 
-It’s better to prepare MRs so we save the reviewer’s time and motivation. Here are the main things to look for:
+```sh
+git switch trunk
+git pull --rebase
+```
 
-- **Scope and size** - Changes should have a **narrow, well-defined, self-contained scope** that they cover exhaustively. For example, a change may implement a new feature or fix a bug. Shorter changes are preferred over longer ones. If a MR makes substantive changes to more than one independent functionality, consider splitting it into multiple separated MRs.
-- Provide a helpful **MR description**. Just a few sentences can help with understanding what the code change is about.
-- Submit **complete, self-reviewed** (by diff), and **self-tested** MRs. I.e make sure they pass all builds as well as all tests and code quality checks.
-- Follow guidelines for the language of the project (such as for [Terraform](https://www.notion.so/Revolgy-Terraform-guidelines-72e07ee7f83b493dbe0e1418ff704eee))
-- **Refactoring changes** should not alter behavior. Also behavior-changing changes should avoid refactoring (consider splitting those two into separated MRs).
-- Test before submitting the review. Make sure that submitted changes are working as expected.
+Now create the new release branch and push it into upstream:
 
-#### Finding reviewers
+```sh
+git switch -c release/1
+git push -u origin release/1
+```
 
-Look for at least two reviewers and add the whole team (but at least one) for the MR. The best option is to look for someone who is already familiar with the project (in case you already collaborate on the project with someone).
+Also you can tag the very first version of the new release. **This will be a repeated action for every new released version.**
 
-You need to explicitly add a reviewer to your merge request/commit. 
+```sh
+git tag release-1.0
+git push --tags
+```
 
-When you’re still unsure about the code (or a review from a primary reviewer), you may look for another person to review the MR, who is not being familiar with the project.
+The current `release` branch should go along with the `trunk`. So `trunk` should be periodically merged into the current `release`.
 
-For our initial phase of code reviewing, code reviews will be performed only by people working on the project directly (included on statuses, etc.).
+```sh
+git switch trunk
+git pull --rebase
+git switch release/1
+git merge trunk
+```
 
-### Reviewer’s side
+## Code review (Git, GitLab, GitHub)
 
-#### What to check for in code reviews
+### Definitions
 
-Assuming the author of the MR paid attention to the **Preparing code for review** chapter and followed it, here’s a list to which reviewer should pay attention to:
+- **merge request**: (or **pull request**) on most Git platforms, a merge request is a form of keeping track of changes that are proposed to be merged into a different branch, usually the main protected branch. Usually, it can be set so that only the "maintainer" or "owner" of the repository can accept the MR, and this person can also directly request that changes be made to the MR before acceptance through discussion.
 
-**Purpose**
+### Abstract
 
-- **Does this code accomplish the author’s purpose?** Every change should have a specific reason (new feature, refactor, bugfix, etc). Does the submitted code actually accomplish this purpose?
+The code review process aims to:
+
+- Improve readability and maintainability.
+- Prevent the introduction of defects.
+- Leverage the experience of other contributors for each proposed change.
+- Follow compliance with standards relative to the project (OWASP, PCI...)
+
+Code review should be done for all contributions as they are to be merged into `trunk` (or any other permanent branch) from which releases are to be made.
+
+Nitpicking irrelevant issues, such as white-space errors, grammar mistakes, etc., is not the goal. The goal is to educate each other and learn something from the review.
+
+Merge Requests should be set so that they cannot be accepted by the same person who wrote the code.
+
+Merge Requests should also contain changes to the CI/CD pipeline code so that it can effectively test itself, and reviewers should verify that this has happened.
+
+Reviewers should be at least one maintainer or owner of the code base. If at any point there is doubt that such a number or the quality of reviewers is sufficient, more may be added at any time.
+
+Developers should go over their MR themselves as if they were the reviewer *before* it is submitted for review. This always saves time of the whole group.
+
+When writing the MR description, always provide it. Just a few sentences in your own words can help the others with understanding what the MR is even about.
+
+### Applied code review
+
+#### Developer's side
+
+Read also [Creating a Merge Request](#creating-a-merge-request) for the practicalities.
+
+When you push your changes into a new branch and create the Merge Request, the following requirements should already be set in place—if not, set them or ask the maintainer to set them.
+
+- A minimum amount of accepted reviews from reviewers—at the very least just one.
+- CI should pass as a complete success.
+
+When a reviewer points out that something should be changed before acceptance, generally it will not be themselves implementing that change, as that would make them a contributor of the MR and therefore not someone who can do review.
+
+Reviewers may go into the individual lines of code and comment on them, and the review will not go through until the conversations are resolved.
+
+#### Reviewer’s side
+
+- **"Does this code accomplish the author’s purpose?"** Every change should have a specific reason (new feature, refactor, bug-fix, etc). "Does the submitted code actually accomplish this purpose?"
 - **Ask questions.** Functions and classes should exist for a reason. When the reason is not clear to the reviewer, this may be an indication that it should be explained more thoroughly.
-
-**Implementation**
 
 - **How you would have solved the problem?** If it’s different, why is that? Does your (imaginary) code handle more (edge) cases? Is it shorter/easier/cleaner/faster/safer yet functionally equivalent? Is there some underlying pattern you spotted that isn’t captured by the current code?
 - **Do you see any potential for useful abstractions?** Partially duplicated code often indicates that a more abstract or general piece of functionality can be extracted and then reused in different contexts.
 - **Does the change follow standard patterns?** Established codebases often exhibit patterns around naming conventions, program logic decomposition, data type definitions, etc. It is usually desirable that changes are implemented in accordance with existing patterns.
 - Check for **new dependencies**. If the MR added a dependency, does it make sense? Is it necesary?
 
-**Legibility and code style**
-
 - **Reading experience.** Did you grasp the concepts in a reasonable amount of time?
 - Is the **code consistent with the project in terms of style**, API conventions, etc?
-
-**Maintainability**
 
 - **Does this change break backward compatibility?**
 - **Does this code need (integration) tests?**
 - **Was the documentation of the added part updated? Is the documentation explanatory?**
 
-**Security**
+- Verify that API endpoints perform appropriate authorization and authentication consistent with the rest of the code base. Check for other common weaknesses, e.g., weak configuration, malicious user input, missing log events, etc. When in doubt, refer the CR to an application security expert.
+- Last but not least, praise concise/readable/efficient/elegant code. Every review request must get a well-written description of why it was or wasn't approved. We do not blame each other, we do not judge each other, we help each other to learn. Everybody makes mistakes.
 
-Verify that API endpoints perform appropriate authorization and authentication consistent with the rest of the codebase. Check for other common weaknesses, e.g., weak configuration, malicious user input, missing log events, etc. When in doubt, refer the CR to an application security expert.
+## Terraform structuring and best practices (Git, Terraform)
 
-Last but not least, praise concise/readable/efficient/elegant code. 🙂  Every review request must get a well-written description of why it was or wasn't approved. We do not blame each other, we do not judge each other, we help each other to learn. Everybody does mistakes.
+### Standard project structure
 
+Terraform defines a [Standard Module Structure]. Please read it, practically all modules go by it and so should we.
+
+Some excerpts from the Standard Module Structure below.
+
+> **`main.tf`, `variables.tf`, `outputs.tf`**. These are the recommended filenames for a minimal module, even if they're empty. `main.tf` should be the primary entrypoint. For a simple module, this may be where all the resources are created. For a complex module, resource creation may be split into multiple files but any nested module calls should be in the main file. `variables.tf` and `outputs.tf` should contain the declarations for variables and outputs, respectively.
+
+Terraform also automatically loads a number of variable definitions files if they are present:
+
+- Files named exactly `terraform.tfvars` or `terraform.tfvars.json`.
+- Any files with names ending in `.auto.tfvars` or `.auto.tfvars.json`.
+
+Always include also a `versions.tf` file to set in ~~stone~~ file the versions of providers and of Terraform itself.
+
+```hcl
+# Figure out current versions by running `terraform version`
+
+terraform {
+  required_version = "~> 1.9.0"
+
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "5.35.0"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "5.35.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.2"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "3.6.2"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = "0.11.2"
+    }
+  }
+}
+```
+
+> **Variables and outputs should have descriptions.** All variables and outputs should have one or two sentence descriptions that explain their purpose. This is used for documentation.
+
+> Nested modules. Nested modules should exist under the modules/ subdirectory. Any nested module with a README.md is considered usable by an external user. If a README doesn't exist, it is considered for internal use only. These are purely advisory; Terraform will not actively deny usage of internal modules. Nested modules should be used to split complex behavior into multiple small modules that advanced users can carefully pick and choose. For example, the Consul module has a nested module for creating the Cluster that is separate from the module to setup necessary IAM policies. This allows a user to bring in their own IAM policy choices.
+> 
+>If the root module includes calls to nested modules, they should use relative paths like ./modules/consul-cluster so that Terraform will consider them to be part of the same repository or package, rather than downloading them again separately.
+>
+>If a repository or package contains multiple nested modules, they should ideally be composable by the caller, rather than calling directly to each other and creating a deeply-nested tree of modules.
+
+> **Examples**. Examples of using the module should exist under the `examples/` subdirectory at the root of the repository. Each example may have a README to explain the goal and usage of the example. Examples for submodules should also be placed in the root `examples/` directory.
+> 
+> Because examples will often be copied into other repositories for customization, any `module` blocks should have their `source` set to the address an external caller would use, not to a relative path.
+
+### `README.md`
+
+**Every** Terraform code base, regardless of whether it is a project or a module, should have a README.
+
+Use the [`terraform-docs`][terraform-docs] command to generate the strictly technical parts of it. This process can (and should) be automated. [Link](https://github.com/terraform-docs/terraform-docs/blob/master/docs/user-guide/introduction.md)
+
+```sh
+terraform-docs markdown . > README.md
+```
+
+### Using Upstream Modules
+
+Upstream modules (modules downloaded from the internet) **should not be referenced** directly.
+
+When planning to use a upstream module, one should fetch the module and store it in either git repository for upstream modules or a new repository created specifically for the module, depending on poly-repo or mono-repo preferences. 
+
+This eases version management.
+
+### Including modules
+
+Always include modules through Terraform itself. **Do not use Git submodules**, they are a pain to work with.
+
+There is a lot of ways to include a module, depending on what your needs are.
+
+```hcl
+module "local" {
+	source = "./modules/foo"
+}
+```
+
+```hcl
+module "git_over_https" {
+	source = "git::https://example.com/foo.git?ref=v1.2.0"
+}
+```
+
+```hcl
+module "git_over_ssh" {
+	source = "git::git@github.com:example/foo.git//path/within/repo"
+}
+```
+
+### `.gitignore`
+
+Always include a `.gitignore` file in a Terraform codebase, but **do not ignore the `.terraform.lock.hcl` file!** It's the equivalent of a NodeJS package lock, it makes the included modules have an exactly fixed version.
+
+```
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data, such as
+# password, private keys, and other secrets. These should not be part of version 
+# control as they are data points which are potentially sensitive and subject 
+# to change depending on the environment.
+*.tfvars
+*.tfvars.json
+!terraform.tfvars
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include override files you do wish to add to version control using negated pattern
+# !example_override.tf
+
+# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
+# example: *tfplan*
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+```
+
+### Remote state
+
+Avoid use of specific non-standard magic glue solutions, such as `Makefile`s, `bash` scripts, etc.
+
+Options for remote state:
+
+- One environment = one account + shared account for state
+- Multiple environments in one account differentiated either on VPC level or via tags etc...
+
+### CI/CD
+
+In CI/CD, always conform to the best practices for both performance and usability on your platform of choice.
+
+Check every commit with fast and cheap tests, such as `terraform fmt`.
+
+Check every commit *that is going into trunk or a release branch* with `terraform validate`.
+
+Perform as many repeating tasks automatically, with the exception of `terraform apply` unless you're confident.
+
+### Optimization for CI/CD performance
+
+If possible, cache the `.terraform` directory in your CI/CD system, as it stores useful files, which Terraform will re-download when appropriate.
+
+Do not use artifact storage for `.terraform`. Only use artifact storage for the plan file.
+
+### Example `.gitlab-ci.yml`
+
+**Warning: Update container versions with the file before use!**
+
+**Note the environment variables in the file, they need to be filled in!**
+
+This GitLab CI document deploys a Terraform codebase to 3 environments (as defined in GitLab), and it is set to validate each and every commit via the first few stages.
+
+- `lint`
+	- Also includes a check for `README.md` being up-to-date via `terraform-docs`.
+	- Checks if the files are formatted, effectively ruling out some very bad commits from the get-go as the formatter needs valid code.
+- `init`
+	- This `init` doesn't actually interact with the backend, as it would lock it for some time, which would be suboptimal for high usage repositories. It is mainly for `validate`, there is another `terraform init` during `plan`
+- `validate`
+	- Runs a deeper validation of the code itself. It checks for things like wrong variable names, missing required arguments, etc.
+
+Caching of `.terraform` is also already in place.
+
+- `plan` - **Runs only in Merge Requests to GL environments!**
+	- Runs a `terraform init` against the real backend.
+	- Runs `terraform plan`.
+	- Generates a report of the plan in a JSON format for easy viewing in GitLab.
+- `apply` - **Runs only after apply.**
+	- Manual step.
+	- Runs `terraform apply` with the plan from before.
+
+```yaml
 ---
 
-TL;DR:
+stages:
+  # Run quick checks if everything is formatted and updated
+  - lint
 
-- Every pull request / merge request must be approved at least by 1 other engineer in the repository. Approver and requester cannot be the same person.
-- The Pull request cannot be approved by person writing the code.
+  # Initialize Terraform working directory
+  - init
 
-![CodeQuality](./img/code-quality.png?raw=true)
+  # Runs a deeper lint
+  - validate
 
+  # Creates a plan for deployment
+  - plan
 
-## 👷 Terraform best practices
-TBD
+  # Applies deployment (has to be approved manually)
+  - apply
+
+variables:
+  TF_PLAN_FILE: tf_plan_file
+  JSON_PLAN_FILE: tf_plan.json
+  TERRAFORM_TF_VARS_FILE: terraform.tfvars
+
+image:
+  name: hashicorp/terraform:1.7.3
+  entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+cache:
+  paths:
+    - .terraform
+    - .terraform.lock.hcl
+
+# Stages
+
+# Checks if README.md is up-to-date.
+# Update it by running `terraform-docs .` and committing README.md.
+terraform-docs:
+  image:
+    name: quay.io/terraform-docs/terraform-docs:0.16.0
+    entrypoint:
+      - '/usr/bin/env'
+  stage: lint
+  dependencies: []
+  needs: []
+  script:
+    - terraform-docs . --output-check
+
+# Checks if Terraform code is formatted using `terraform fmt`.
+terraform-fmt:
+  stage: lint
+  dependencies: []
+  needs: []
+  script:
+    - terraform fmt -no-color -check
+
+# Initializes working directory by "creating initial files, loading any remote
+# state, downloading modules".
+# But it won't be loading any remote state due to -backend=false
+init:
+  stage: init
+  before_script:
+    - terraform version
+  script:
+    - terraform init -no-color -backend=false -upgrade
+
+# Validate the configuration files in a directory, referring only to the
+# configuration and not accessing any remote services such as remote state,
+# provider APIs, etc.
+validate:
+  stage: validate
+  dependencies: ["init"]
+  script:
+    - terraform validate -no-color .
+
+# Generates a speculative execution plan, showing what actions Terraform
+# would take to apply the current configuration. This command will not
+# actually perform the planned actions.
+.plan:
+  stage: plan
+  dependencies: ["init"]
+  before_script:
+    - apk --no-cache add jq
+  script:
+    - terraform init -no-color -reconfigure -backend-config="bucket=$ENV_TF_BACKEND_BUCKET" -backend-config="prefix=$ENV_TF_BACKEND_PREFIX"
+    - terraform plan -no-color -var-file=$TERRAFORM_TF_VARS_FILE -var-file=$ENV_TF_VARS_FILE -out=$TF_PLAN_FILE
+    - terraform show -no-color --json $TF_PLAN_FILE | jq -r '([.resource_changes[]?.change.actions?]|flatten)|{"create":(map(select(.=="create"))|length),"update":(map(select(.=="update"))|length),"delete":(map(select(.=="delete"))|length)}' > $JSON_PLAN_FILE
+  artifacts:
+    reports:
+      terraform: $JSON_PLAN_FILE
+    paths:
+      - $TF_PLAN_FILE
+    expire_in: 1 week
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_ENVIRONMENT_NAME
+      allow_failure: false
+    - if: $CI_COMMIT_BRANCH == $CI_ENVIRONMENT_NAME
+      allow_failure: false
+
+plan-dev:
+  extends: .plan
+  environment: dev
+
+plan-stg:
+  extends: .plan
+  environment: stg
+
+plan-prd:
+  extends: .plan
+  environment: prd
+
+# Creates or updates infrastructure according to Terraform configuration
+# files in the current directory.
+.apply:
+  stage: apply
+  script:
+    - terraform apply -no-color -auto-approve -input=false $TF_PLAN_FILE
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_ENVIRONMENT_NAME
+      when: manual
+      allow_failure: false
+
+apply-dev:
+  extends: .apply
+  dependencies: ["init", "plan-dev"]
+  environment: dev
+
+apply-stg:
+  extends: .apply
+  dependencies: ["init", "plan-stg"]
+  environment: stg
+
+apply-prd:
+  extends: .apply
+  dependencies: ["init", "plan-prd"]
+  environment: prd
+```
+
+[Git]: https://git-scm.com/
+[Trunk Based Development]: https://trunkbaseddevelopment.com/
+[Terraform]: https://www.terraform.io/
+[IaC]: https://en.wikipedia.org/wiki/Infrastructure_as_code
+[CI/CD]: https://about.gitlab.com/topics/ci-cd/
+[Code Review]: https://about.gitlab.com/topics/version-control/what-is-code-review/
+[VCS]: https://git-scm.com/book/en/v2/Getting-Started-About-Version-Control
+[Installing Git]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+[GitHub]: https://github.com/
+[Linus Torvalds]: https://en.wikipedia.org/wiki/Linus_Torvalds
+[torvalds/linux.git]: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+[stable/linux.git]: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+[Linux]: https://kernel.org/
+[Semantic Versioning]: https://semver.org/
+[Standard Module Structure]: https://developer.hashicorp.com/terraform/language/modules/develop/structure
